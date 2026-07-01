@@ -30,10 +30,13 @@ pub struct TransferAttempt {
 pub trait Identity {
     fn bind(env: Env, identity: Address, queue_id: Symbol);
     fn unbind(env: Env, identity: Address, queue_id: Symbol);
+    fn revoke(env: Env, admin: Address, identity: Address);
     fn is_bound(env: Env, identity: Address, queue_id: Symbol) -> bool;
     fn can_transfer(env: Env, from: Address, to: Address, queue_id: Symbol) -> bool;
     fn record_transfer_attempt(env: Env, from: Address, to: Address, queue_id: Symbol);
     fn get_record(env: Env, identity: Address) -> Option<IdentityRecord>;
+    fn get_admin(env: Env) -> Option<Address>;
+    fn initialize(env: Env, admin: Address);
 }
 
 pub struct IdentityImpl;
@@ -103,6 +106,36 @@ impl Identity for IdentityImpl {
             None
         }
     }
+
+    fn initialize(env: Env, admin: Address) {
+        admin.require_auth();
+        let key = Symbol::new(&env, "admin");
+        if env.storage().persistent().has(&key) {
+            panic!("already initialized");
+        }
+        env.storage().persistent().set(&key, &admin);
+    }
+
+    fn get_admin(env: Env) -> Option<Address> {
+        let key = Symbol::new(&env, "admin");
+        env.storage().persistent().get(&key)
+    }
+
+    fn revoke(env: Env, admin: Address, identity: Address) {
+        admin.require_auth();
+        let admin_key = Symbol::new(&env, "admin");
+        let stored_admin: Address = env.storage().persistent()
+            .get(&admin_key)
+            .unwrap_or_else(|| panic!("not initialized"));
+        if admin != stored_admin {
+            panic!("unauthorized");
+        }
+        let mut record = Self::get_record_internal(&env, &identity);
+        record.status = BindingStatus::Revoked;
+        let key = Self::record_key(&env, &identity);
+        env.storage().persistent().set(&key, &record);
+        emit(&env, Symbol::new(&env, "Revoked"), Symbol::new(&env, ""), &identity, env.ledger().timestamp());
+    }
 }
 
 impl IdentityImpl {
@@ -119,7 +152,7 @@ impl IdentityImpl {
             })
     }
 
-    fn record_key(env: &Env, identity: &Address) -> (Symbol, Address) {
+    pub fn record_key(env: &Env, identity: &Address) -> (Symbol, Address) {
         (Symbol::new(env, "identity"), identity.clone())
     }
 
