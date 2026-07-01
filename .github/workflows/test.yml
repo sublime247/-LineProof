@@ -8,13 +8,31 @@ on:
 
 jobs:
   test-rust:
+    name: Rust Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --workspace
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+      - name: Build contracts (WASM target)
+        run: cargo build --target wasm32-unknown-unknown --release
+        working-directory: contracts
+      - name: Run contract tests
+        run: cargo test --workspace
+        working-directory: contracts
 
-  test-typescript:
+  test-sdk:
+    name: SDK Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,5 +46,25 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+          cache-dependency-path: sdk/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
