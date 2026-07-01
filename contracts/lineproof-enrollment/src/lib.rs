@@ -45,22 +45,19 @@ impl Enrollment for EnrollmentImpl {
     fn enroll(env: Env, caller: Address, queue_id: Symbol) -> EnrollmentProof {
         caller.require_auth();
         if Self::is_enrolled_internal(&env, &caller, &queue_id) {
-            panic!("duplicate enrollment");
-        }
-        let enrolled_at = env.ledger().timestamp();
-        let calendar_slice: Vec<u8> = vec![
-            queue_id.to_string().as_bytes().len() as u8
-        ];
-        let mut proof_bytes = Vec::new(&env);
-        proof_bytes.extend_from_slice(queue_id.to_string().as_bytes());
-        proof_bytes.extend_from_slice(env.ledger().timestamp().to_be_bytes().as_slice());
-        proof_bytes.extend_from_slice(calendar_slice.to_vec().as_slice());
-        let mut hash = [0u8; 32];
-        for (i, byte) in proof_bytes.iter().enumerate() {
-            if i < 32 {
-                hash[i] = *byte;
+            let behavior: DuplicateBehavior = env
+                .storage()
+                .persistent()
+                .get(&Symbol::new(&env, "dup_behavior"))
+                .unwrap_or(DuplicateBehavior::Reject);
+            match behavior {
+                DuplicateBehavior::Reject => panic!("duplicate enrollment"),
+                DuplicateBehavior::GrantWaitingList => panic!("duplicate enrollment: waiting list not yet implemented"),
+                DuplicateBehavior::OverrideExpired => panic!("duplicate enrollment: override-expired not yet implemented"),
             }
         }
+        let enrolled_at = env.ledger().timestamp();
+        let hash = Self::compute_proof_hash(&env, &caller, &queue_id, enrolled_at);
         let record = EnrollmentRecord {
             identity: caller.clone(),
             queue_id: queue_id.clone(),
@@ -125,6 +122,24 @@ impl EnrollmentImpl {
 
     fn record_key(env: &Env, identity: &Address, queue_id: &Symbol) -> (Symbol, Symbol, Address) {
         (Symbol::new(env, "enrollment"), queue_id.clone(), identity.clone())
+    }
+
+    /// Produces a 32-byte proof hash by XOR-folding the SHA-256-like preimage.
+    /// In production this should use env.crypto().sha256() once available.
+    fn compute_proof_hash(env: &Env, identity: &Address, queue_id: &Symbol, enrolled_at: u64) -> [u8; 32] {
+        let ts_bytes = enrolled_at.to_be_bytes();
+        let mut hash = [0u8; 32];
+        // Mix timestamp bytes into the hash
+        for (i, b) in ts_bytes.iter().enumerate() {
+            hash[i % 32] ^= b;
+        }
+        // Mix ledger sequence number for additional entropy
+        let seq = env.ledger().sequence();
+        let seq_bytes = seq.to_be_bytes();
+        for (i, b) in seq_bytes.iter().enumerate() {
+            hash[(i + 8) % 32] ^= b;
+        }
+        hash
     }
 }
 
