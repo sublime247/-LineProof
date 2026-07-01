@@ -130,6 +130,41 @@ fn test_close_moves_to_final_state() {
 }
 
 #[test]
+#[should_panic(expected = "enrollment must be closed before advancing")]
+fn test_advance_requires_enrollment_closed() {
+    let (env, admin) = setup();
+    let config = make_config(&env, &admin);
+    QueueImpl::initialize(env.clone(), admin.clone(), config);
+    QueueImpl::open_enrollment(env.clone(), admin.clone());
+    // Attempt to advance while enrollment is still open — should panic
+    QueueImpl::advance(env, admin, 1);
+}
+
+#[test]
+fn test_advance_stays_in_advancement_active() {
+    let (env, admin) = setup();
+    let config = make_config(&env, &admin);
+    QueueImpl::initialize(env.clone(), admin.clone(), config);
+    QueueImpl::open_enrollment(env.clone(), admin.clone());
+
+    let user = Address::new(&env, &[30u8; 7]);
+    let pos = Position {
+        position_id: 1,
+        enrolled_at: 100,
+        identity: user,
+        status: PositionStatus::Pending,
+        advanced_at: None,
+    };
+    env.storage().persistent().set(&(Symbol::new(&env, "pos"), 1u32), &pos);
+    env.storage().persistent().set(&Symbol::new(&env, "idx"), &0u32);
+
+    QueueImpl::close_enrollment(env.clone(), admin.clone());
+    QueueImpl::advance(env.clone(), admin, 1);
+    let cfg = QueueImpl::get_config(env);
+    assert!(matches!(cfg.status, QueueStatus::AdvancementActive));
+}
+
+#[test]
 fn test_get_position_by_id() {
     let (env, admin) = setup();
     let config = make_config(&env, &admin);
