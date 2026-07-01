@@ -1,19 +1,42 @@
-name: Code Quality
+name: Lint
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 jobs:
   lint-rust:
+    name: Rust Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: rustfmt check
-        run: cargo fmt --all -- --check
-      - name: clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        with:
+          components: rustfmt, clippy
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/target
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('contracts/Cargo.lock') }}
+      - name: Check formatting
+        run: cargo fmt -- --check
+        working-directory: contracts
+      - name: Run Clippy
+        run: >
+          cargo clippy
+          -p lineproof-queue-factory
+          -p lineproof-queue
+          -p lineproof-enrollment
+          -p lineproof-escrow
+          -p lineproof-identity
+          -- -D warnings
+        working-directory: contracts
 
-  lint-typescript:
+  lint-sdk:
+    name: SDK Lint & Typecheck
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -27,6 +50,49 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+          cache-dependency-path: sdk/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+
+  lint-backend:
+    name: Backend Lint & Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+  lint-frontend:
+    name: Frontend Lint & Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
