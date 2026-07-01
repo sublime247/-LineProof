@@ -36,6 +36,8 @@ pub trait Enrollment {
     fn is_enrolled(env: Env, identity: Address, queue_id: Symbol) -> bool;
     fn enrollment_record(env: Env, identity: Address, queue_id: Symbol) -> Option<EnrollmentRecord>;
     fn set_duplicate_behavior(env: Env, admin: Address, behavior: DuplicateBehavior);
+    fn finalize_enrollment(env: Env, admin: Address, identity: Address, queue_id: Symbol);
+    fn enrollment_count(env: Env, queue_id: Symbol) -> u32;
 }
 
 pub struct EnrollmentImpl;
@@ -104,6 +106,23 @@ impl Enrollment for EnrollmentImpl {
         admin.require_auth();
         env.storage().persistent().set(&Symbol::new(&env, "dup_behavior"), &behavior);
     }
+
+    fn finalize_enrollment(env: Env, admin: Address, identity: Address, queue_id: Symbol) {
+        admin.require_auth();
+        let mut record = Self::load_record(&env, &identity, &queue_id);
+        if record.finalized {
+            panic!("already finalized");
+        }
+        record.finalized = true;
+        let key = Self::record_key(&env, &identity, &queue_id);
+        env.storage().persistent().set(&key, &record);
+        emit(&env, Symbol::new(&env, "Finalized"), queue_id, &identity, record.enrolled_at, record.proof_hash);
+    }
+
+    fn enrollment_count(env: Env, queue_id: Symbol) -> u32 {
+        let key = Self::count_key(&env, &queue_id);
+        env.storage().persistent().get(&key).unwrap_or(0u32)
+    }
 }
 
 impl EnrollmentImpl {
@@ -122,6 +141,10 @@ impl EnrollmentImpl {
 
     fn record_key(env: &Env, identity: &Address, queue_id: &Symbol) -> (Symbol, Symbol, Address) {
         (Symbol::new(env, "enrollment"), queue_id.clone(), identity.clone())
+    }
+
+    fn count_key(env: &Env, queue_id: &Symbol) -> (Symbol, Symbol) {
+        (Symbol::new(env, "enroll_cnt"), queue_id.clone())
     }
 
     /// Produces a 32-byte proof hash by XOR-folding the SHA-256-like preimage.
