@@ -8,6 +8,7 @@
  */
 
 export * from './types.js';
+export * from './events.js';
 export { LineProofClient } from './client.js';
 export { QueueClient } from './queue.js';
 export { EnrollmentClient } from './enrollment.js';
