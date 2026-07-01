@@ -97,3 +97,29 @@ fn test_deposit_rejects_duplicate_for_same_user_and_queue() {
     EscrowImpl::deposit(env.clone(), user.clone(), Symbol::new(&env, "sneaker-drop"), 250i128, asset.clone());
     EscrowImpl::deposit(env, user, Symbol::new(&env, "sneaker-drop"), 300i128, asset);
 }
+
+#[test]
+fn test_expire_updates_status() {
+    let (env, admin) = setup();
+    let mut config = make_config(&env, &admin);
+    config.hold_period_days = 0; // expires immediately
+    EscrowImpl::set_config(env.clone(), admin.clone(), config);
+    let user = Address::new(&env, &[10u8; 7]);
+    let asset = Address::new(&env, &[8u8; 7]);
+    EscrowImpl::deposit(env.clone(), user.clone(), Symbol::new(&env, "sneaker-drop"), 200i128, asset);
+    EscrowImpl::expire(env.clone(), user.clone(), Symbol::new(&env, "sneaker-drop"));
+    let record = EscrowImpl::get_record(env, user, Symbol::new(&env, "sneaker-drop")).unwrap();
+    assert!(matches!(record.status, EscrowStatus::Expired));
+}
+
+#[test]
+#[should_panic(expected = "escrow not active")]
+fn test_release_already_released_panics() {
+    let (env, admin) = setup();
+    EscrowImpl::set_config(env.clone(), admin.clone(), make_config(&env, &admin));
+    let user = Address::new(&env, &[11u8; 7]);
+    let asset = Address::new(&env, &[8u8; 7]);
+    EscrowImpl::deposit(env.clone(), user.clone(), Symbol::new(&env, "sneaker-drop"), 500i128, asset);
+    EscrowImpl::release(env.clone(), admin.clone(), user.clone(), Symbol::new(&env, "sneaker-drop"));
+    EscrowImpl::release(env, admin, user, Symbol::new(&env, "sneaker-drop"));
+}
