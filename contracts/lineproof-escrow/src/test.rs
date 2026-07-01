@@ -44,6 +44,19 @@ fn test_deposit_creates_record() {
 }
 
 #[test]
+fn test_get_total_held_accumulates() {
+    let (env, admin) = setup();
+    EscrowImpl::set_config(env.clone(), admin.clone(), make_config(&env, &admin));
+    let user1 = Address::new(&env, &[9u8; 7]);
+    let user2 = Address::new(&env, &[12u8; 7]);
+    let asset = Address::new(&env, &[8u8; 7]);
+    EscrowImpl::deposit(env.clone(), user1.clone(), Symbol::new(&env, "sneaker-drop"), 500i128, asset.clone());
+    EscrowImpl::deposit(env.clone(), user2.clone(), Symbol::new(&env, "sneaker-drop"), 300i128, asset.clone());
+    let total = EscrowImpl::get_total_held(env.clone(), Symbol::new(&env, "sneaker-drop"));
+    assert_eq!(total, 800i128);
+}
+
+#[test]
 fn test_release_changes_status() {
     let (env, admin) = setup();
     EscrowImpl::set_config(env.clone(), admin.clone(), make_config(&env, &admin));
