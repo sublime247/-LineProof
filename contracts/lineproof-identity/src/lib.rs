@@ -47,6 +47,10 @@ impl Identity for IdentityImpl {
             panic!("identity revoked");
         }
         record.queues.push_back(queue_id.clone());
+        if record.bound_at == 0 {
+            record.bound_at = env.ledger().timestamp();
+        }
+        record.status = BindingStatus::Bound;
         let key = Self::record_key(&env, &identity);
         env.storage().persistent().set(&key, &record);
         emit(&env, Symbol::new(&env, "Bound"), queue_id, &identity, env.ledger().timestamp());
