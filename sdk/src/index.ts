@@ -3,11 +3,16 @@
  *
  * Provides a high-level, typed API for interacting with LineProof Soroban contracts.
  * Handles contract calls, event subscription, retries, and identity management.
+ *
+ * @module @lineproof/sdk
  */
 
-export * from './types';
-export { LineProofClient } from './client';
-export { QueueClient } from './queue';
-export { EnrollmentClient } from './enrollment';
-export { EscrowClient } from './escrow';
-export { IdentityClient } from './identity';
+export * from './types.js';
+export { LineProofClient } from './client.js';
+export { QueueClient } from './queue.js';
+export { EnrollmentClient } from './enrollment.js';
+export { EscrowClient } from './escrow.js';
+export { IdentityClient } from './identity.js';
+
+// Re-export commonly used Stellar SDK types for convenience
+export { Networks, Keypair } from '@stellar/stellar-sdk';
