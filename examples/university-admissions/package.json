@@ -1,0 +1,12 @@
+{
+  "name": "@lineproof/example-university-admissions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LineProof example: university admissions waitlist with priority tiers",
+  "scripts": {
+    "start": "echo \"See README.md for integration instructions\""
+  },
+  "dependencies": {
+    "@lineproof/sdk": "workspace:*"
+  }
+}

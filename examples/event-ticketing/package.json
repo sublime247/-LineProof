@@ -1,0 +1,12 @@
+{
+  "name": "@lineproof/example-event-ticketing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LineProof example: event ticketing queue with anti-scalping escrow",
+  "scripts": {
+    "start": "echo \"See README.md for integration instructions\""
+  },
+  "dependencies": {
+    "@lineproof/sdk": "workspace:*"
+  }
+}

@@ -1,1 +1,12 @@
-package.json files for example apps to satisfy npm workspace expectations
+{
+  "name": "@lineproof/example-healthcare-scheduling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LineProof example: healthcare appointment queue",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@lineproof/sdk": "workspace:*"
+  }
+}
