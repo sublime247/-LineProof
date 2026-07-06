@@ -20,36 +20,11 @@ export class QueueClient {
     this.queueContractId = options.queueContractId;
   }
 
-  async enroll(identity: Keypair, queueContractId = this.queueContractId): Promise<string> {
-    const sourceKeypair = Keypair.fromSecret(this.lineProof.getPublicKey());
-    const source = await this.lineProof.server.loadAccount(sourceKeypair.publicKey());
-    const tx = new TransactionBuilder(source, {
-      fee: BASE_FEE,
-      networkPassphrase: this.lineProof.networkPassphrase,
-    })
-      .addOperation(
-        Operation.invokeContractFunction({
-          contract: queueContractId,
-          function: 'enroll',
-          args: [],
-          source: sourceKeypair,
-        }),
-      )
-      .setTimeout(30)
-      .build();
-    tx.sign(sourceKeypair, identity);
-    const result = await this.lineProof.server.submitTransaction(tx);
-    return result.hash;
-  }
-
   async getPosition(positionId: number): Promise<unknown> {
     if (!Number.isInteger(positionId) || positionId <= 0) {
       throw new SDKError('INVALID_INPUT', 'positionId must be a positive integer');
     }
-    throw new SDKError(
-      'NOT_IMPLEMENTED',
-      'getPosition requires a bound contract client exposing Soroban RPC',
-    );
+    throw new SDKError('NOT_IMPLEMENTED', 'getPosition requires a bound contract client exposing Soroban RPC');
   }
 
   async advance(batchSize: number): Promise<number[]> {
@@ -64,7 +39,6 @@ export class QueueClient {
           contract: this.queueContractId,
           function: 'advance',
           args: [],
-          source: sourceKeypair,
         }),
       )
       .setTimeout(30)
@@ -86,7 +60,6 @@ export class QueueClient {
           contract: this.queueContractId,
           function: 'close',
           args: [],
-          source: sourceKeypair,
         }),
       )
       .setTimeout(30)

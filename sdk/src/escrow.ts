@@ -1,9 +1,4 @@
-import {
-  TransactionBuilder,
-  Operation,
-  Keypair,
-  BASE_FEE,
-} from '@stellar/stellar-sdk';
+import { TransactionBuilder, Operation, Keypair, BASE_FEE } from '@stellar/stellar-sdk';
 import { LineProofClient } from './client.js';
 import { SDKError } from './types.js';
 
@@ -24,19 +19,11 @@ export class EscrowClient {
       fee: BASE_FEE,
       networkPassphrase: this.client.getNetworkPassphrase(),
     })
-      .addOperation(
-        Operation.invokeContractFunction({
-          contract: escrowContractId,
-          function: 'deposit',
-          args: [],
-          source: sourceKeypair,
-        }),
-      )
+      .addOperation(Operation.invokeContractFunction({ contract: escrowContractId, function: 'deposit', args: [] }))
       .setTimeout(30)
       .build();
     tx.sign(sourceKeypair);
-    const result = await this.client.server.submitTransaction(tx);
-    return result.hash;
+    return (await this.client.server.submitTransaction(tx)).hash;
   }
 
   async release(escrowContractId: string, _identity: string): Promise<string> {
@@ -46,19 +33,11 @@ export class EscrowClient {
       fee: BASE_FEE,
       networkPassphrase: this.client.getNetworkPassphrase(),
     })
-      .addOperation(
-        Operation.invokeContractFunction({
-          contract: escrowContractId,
-          function: 'release',
-          args: [],
-          source: sourceKeypair,
-        }),
-      )
+      .addOperation(Operation.invokeContractFunction({ contract: escrowContractId, function: 'release', args: [] }))
       .setTimeout(30)
       .build();
     tx.sign(sourceKeypair);
-    const result = await this.client.server.submitTransaction(tx);
-    return result.hash;
+    return (await this.client.server.submitTransaction(tx)).hash;
   }
 
   async refund(escrowContractId: string, _identity: string): Promise<string> {
@@ -68,18 +47,10 @@ export class EscrowClient {
       fee: BASE_FEE,
       networkPassphrase: this.client.getNetworkPassphrase(),
     })
-      .addOperation(
-        Operation.invokeContractFunction({
-          contract: escrowContractId,
-          function: 'refund',
-          args: [],
-          source: sourceKeypair,
-        }),
-      )
+      .addOperation(Operation.invokeContractFunction({ contract: escrowContractId, function: 'refund', args: [] }))
       .setTimeout(30)
       .build();
     tx.sign(sourceKeypair);
-    const result = await this.client.server.submitTransaction(tx);
-    return result.hash;
+    return (await this.client.server.submitTransaction(tx)).hash;
   }
 }

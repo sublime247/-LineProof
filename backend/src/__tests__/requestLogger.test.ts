@@ -13,11 +13,11 @@ function makeReq(overrides: Partial<Request> = {}): Request {
 }
 
 function makeRes(statusCode = 200) {
-  const listeners: Record<string, (() => void)[]> = {};
+  const listeners: Record<string, Array<() => void>> = {};
   return {
     statusCode,
     on: (event: string, cb: () => void) => {
-      listeners[event] = listeners[event] ?? [];
+      if (!listeners[event]) listeners[event] = [];
       listeners[event].push(cb);
     },
     emit: (event: string) => {
@@ -27,14 +27,16 @@ function makeRes(statusCode = 200) {
 }
 
 describe('requestLogger', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  // Use a plain function spy so TypeScript doesn't narrow the type too tightly
+  let logSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    consoleSpy.mockRestore();
+    logSpy.mockRestore();
   });
 
   it('calls next()', () => {
@@ -49,8 +51,9 @@ describe('requestLogger', () => {
     const res = makeRes(200);
     requestLogger(makeReq(), res, next);
     res.emit('finish');
-    expect(consoleSpy).toHaveBeenCalledOnce();
-    const logged = JSON.parse(consoleSpy.mock.calls[0][0]);
+    expect(logSpy).toHaveBeenCalledOnce();
+    const raw = (logSpy.mock.calls[0] as string[])[0];
+    const logged = JSON.parse(raw) as { level: string; status: number; method: string };
     expect(logged.level).toBe('INFO');
     expect(logged.status).toBe(200);
     expect(logged.method).toBe('GET');
@@ -61,7 +64,8 @@ describe('requestLogger', () => {
     const res = makeRes(404);
     requestLogger(makeReq(), res, next);
     res.emit('finish');
-    const logged = JSON.parse(consoleSpy.mock.calls[0][0]);
+    const raw = (logSpy.mock.calls[0] as string[])[0];
+    const logged = JSON.parse(raw) as { level: string };
     expect(logged.level).toBe('WARN');
   });
 
@@ -70,7 +74,8 @@ describe('requestLogger', () => {
     const res = makeRes(500);
     requestLogger(makeReq(), res, next);
     res.emit('finish');
-    const logged = JSON.parse(consoleSpy.mock.calls[0][0]);
+    const raw = (logSpy.mock.calls[0] as string[])[0];
+    const logged = JSON.parse(raw) as { level: string };
     expect(logged.level).toBe('ERROR');
   });
 });

@@ -26,7 +26,6 @@ export class EnrollmentClient {
           contract: queueId,
           function: 'enroll',
           args: [],
-          source: sourceKeypair,
         }),
       )
       .setTimeout(30)
@@ -48,7 +47,6 @@ export class EnrollmentClient {
           contract: queueId,
           function: 'cancel',
           args: [],
-          source: sourceKeypair,
         }),
       )
       .setTimeout(30)
@@ -59,9 +57,6 @@ export class EnrollmentClient {
   }
 
   async isEnrolled(_queueId: string, _identity: string): Promise<boolean> {
-    throw new SDKError(
-      'NOT_IMPLEMENTED',
-      'isEnrolled requires a bound contract client exposing Soroban RPC',
-    );
+    throw new SDKError('NOT_IMPLEMENTED', 'isEnrolled requires a bound contract client exposing Soroban RPC');
   }
 }

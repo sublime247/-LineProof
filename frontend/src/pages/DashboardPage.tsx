@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import Spinner from '../components/Spinner';
 import EmptyState from '../components/EmptyState';
-import QueueStatusBadge from '../components/QueueStatusBadge';
 import CopyButton from '../components/CopyButton';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api';

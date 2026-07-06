@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface Props {
   value: number;   // 0–100
   label?: string;

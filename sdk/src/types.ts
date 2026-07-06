@@ -1,4 +1,4 @@
-import { Networks, Keypair, Address as StellarAddress } from '@stellar/stellar-sdk';
+import { Networks, Keypair, StrKey } from '@stellar/stellar-sdk';
 
 export interface LineProofConfig {
   rpcServerUrl: string;
@@ -130,7 +130,7 @@ export function generateKeypair(): ReturnType<typeof Keypair.random> {
 }
 
 export function validateAddress(address: string): void {
-  if (!StellarAddress.isValid(address)) {
+  if (!StrKey.isValidEd25519PublicKey(address)) {
     throw new SDKError('INVALID_ADDRESS', `Invalid Stellar address: ${address}`);
   }
 }

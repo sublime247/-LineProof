@@ -22,10 +22,3 @@ thiserror = "2"
 soroban-sdk = { version = "22.0", features = ["testutils"] }
 pretty_assertions = "1.4"
 
-[profile.release]
-opt-level = "z"
-overflow-checks = true
-debug = false
-panic = "abort"
-codegen-units = 1
-lto = "fat"

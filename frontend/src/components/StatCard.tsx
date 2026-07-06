@@ -1,10 +1,10 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 
 interface Props {
   label: string;
   value: string | number;
   subtext?: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   className?: string;
 }
 

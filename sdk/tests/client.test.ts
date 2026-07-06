@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { LineProofClient } from '../src/client';
 import { SDKError, NetworkPassphrase } from '../src/types';
 
+// vi.mock is hoisted — no top-level variables allowed inside the factory.
+// Use inline values only.
 vi.mock('@stellar/stellar-sdk', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@stellar/stellar-sdk')>();
   return {
@@ -15,19 +17,19 @@ vi.mock('@stellar/stellar-sdk', async (importOriginal) => {
     Keypair: {
       ...actual.Keypair,
       fromSecret: vi.fn(() => ({
-        publicKey: () => 'GABC1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF12345',
-        secret: () => 'SABC',
+        publicKey: () => 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+        secret: () => 'SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
         sign: vi.fn(),
       })),
       random: vi.fn(() => ({
-        publicKey: () => 'GRANDOM11111111111111111111111111111111111111111111111111',
-        secret: () => 'SRANDOM',
+        publicKey: () => 'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWHF',
+        secret: () => 'SBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
       })),
     },
     Networks: {
-      TESTNET: NetworkPassphrase.TESTNET,
-      PUBLIC: NetworkPassphrase.MAINNET,
-      STANDALONE: NetworkPassphrase.STANDALONE,
+      TESTNET: 'Test SDF Network ; September 2015',
+      PUBLIC: 'Public Global Stellar Network ; September 2015',
+      STANDALONE: 'Standalone Network ; February 2017',
     },
     BASE_FEE: '100',
   };
@@ -39,7 +41,7 @@ describe('LineProofClient constructor', () => {
       new LineProofClient({
         rpcServerUrl: 'http://localhost:8000',
         networkPassphrase: 'Unknown Network ; Never',
-      })
+      }),
     ).toThrow(SDKError);
   });
 
@@ -65,7 +67,7 @@ describe('LineProofClient.deployFactory', () => {
     const client = new LineProofClient({
       rpcServerUrl: 'http://localhost:8000',
       networkPassphrase: NetworkPassphrase.TESTNET,
-      privateKey: 'SABC',
+      privateKey: 'SAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     });
     const id = await client.deployFactory();
     expect(typeof id).toBe('string');

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 interface Props {
   content: string;
-  children: React.ReactNode;
+  children: ReactNode;
   position?: 'top' | 'bottom';
 }
 

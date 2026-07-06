@@ -1,9 +1,4 @@
-import {
-  TransactionBuilder,
-  Operation,
-  Keypair,
-  BASE_FEE,
-} from '@stellar/stellar-sdk';
+import { TransactionBuilder, Operation, Keypair, BASE_FEE } from '@stellar/stellar-sdk';
 import { LineProofClient } from './client.js';
 import { SDKError } from './types.js';
 
@@ -24,34 +19,18 @@ export class IdentityClient {
       fee: BASE_FEE,
       networkPassphrase: this.client.getNetworkPassphrase(),
     })
-      .addOperation(
-        Operation.invokeContractFunction({
-          contract: queueId,
-          function: 'bind',
-          args: [],
-          source: sourceKeypair,
-        }),
-      )
+      .addOperation(Operation.invokeContractFunction({ contract: queueId, function: 'bind', args: [] }))
       .setTimeout(30)
       .build();
     tx.sign(sourceKeypair);
-    const result = await this.client.server.submitTransaction(tx);
-    return result.hash;
+    return (await this.client.server.submitTransaction(tx)).hash;
   }
 
   async isBound(_queueId: string, _identity: string): Promise<boolean> {
     throw new SDKError('NOT_IMPLEMENTED', 'isBound requires Soroban RPC contract client');
   }
 
-  async recordTransferAttempt(
-    from: string,
-    to: string,
-    _queueId: string,
-  ): Promise<void> {
-    throw new SDKError(
-      'TRANSFER_DISABLED',
-      'Transfer attempts are reverted by the protocol',
-      { from, to },
-    );
+  async recordTransferAttempt(from: string, to: string, _queueId: string): Promise<void> {
+    throw new SDKError('TRANSFER_DISABLED', 'Transfer attempts are reverted by the protocol', { from, to });
   }
 }

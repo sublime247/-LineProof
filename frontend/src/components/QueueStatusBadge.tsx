@@ -1,5 +1,3 @@
-import React from 'react';
-
 type Status = 'Draft' | 'Open' | 'EnrollmentOpen' | 'EnrollmentClosed' | 'AdvancementActive' | 'Closed';
 
 const STATUS_STYLES: Record<Status, string> = {
