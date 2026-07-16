@@ -1,5 +1,8 @@
 import { QueueStatus, transitionQueueStatus } from '../schemas/queueStatus.js';
 export { QueueStatus };
+import { defaultMemoryAdapter } from '../storage/index.js';
+
+export type QueueStatus = 'Draft' | 'Open' | 'AdvancementActive' | 'Closed';
 
 export type Queue = {
   id: string;
@@ -23,6 +26,13 @@ export type QueueStats = {
   remaining: number;
   percentAdvanced: number;
 };
+
+// Queue records live in the shared storage adapter (namespace `queues`) rather
+// than a module-level array, so the service goes through the persistence seam
+// (issue #4). The MemoryAdapter stores object references, so mutating a returned
+// queue mutates the stored record — preserving the previous fixture behaviour.
+const store = defaultMemoryAdapter;
+const NS = 'queues';
 
 const FIXTURE_QUEUES: Queue[] = [
   {
@@ -55,10 +65,19 @@ const FIXTURE_QUEUES: Queue[] = [
   },
 ];
 
-export const mockQueues: Queue[] = FIXTURE_QUEUES;
+// Seed fixtures once so first-run reads have data. `set` is idempotent, so a
+// module reload simply refreshes the fixture rows without clearing created ones.
+for (const queue of FIXTURE_QUEUES) {
+  if (store.get<Queue>(NS, queue.id) === undefined) {
+    store.set<Queue>(NS, queue.id, queue);
+  }
+}
+
+/** List every queue (live view over the store). */
+export const listQueues = (): Queue[] => store.list<Queue>(NS);
 
 export const getQueueById = (id: string): Queue | undefined => {
-  return FIXTURE_QUEUES.find((queue) => queue.id === id || queue.slug === id);
+  return listQueues().find((queue) => queue.id === id || queue.slug === id);
 };
 
 export const getQueueStats = (id: string): QueueStats | undefined => {
@@ -81,7 +100,7 @@ export const createQueue = (payload: {
   escrowRequired?: boolean;
   description?: string;
 }): Queue => {
-  if (FIXTURE_QUEUES.some((q) => q.slug === payload.slug || q.id === payload.slug)) {
+  if (listQueues().some((q) => q.slug === payload.slug || q.id === payload.slug)) {
     const error = new Error(`Queue with slug "${payload.slug}" already exists`) as Error & { status: number };
     error.status = 409;
     throw error;
@@ -100,7 +119,7 @@ export const createQueue = (payload: {
     escrowAmount: 0,
     createdAt: new Date().toISOString(),
   };
-  FIXTURE_QUEUES.push(queue);
+  store.set<Queue>(NS, queue.id, queue);
   return queue;
 };
 
@@ -118,6 +137,7 @@ export const advanceQueue = (id: string, batchSize: number): Queue | undefined =
   queue.status = QueueStatus.AdvancementActive;
   const toAdvance = Math.min(batchSize, queue.enrolled - queue.advanced);
   queue.advanced += Math.max(0, toAdvance);
+  store.set<Queue>(NS, queue.id, queue);
   return queue;
 };
 
