@@ -13,6 +13,9 @@ export type PositionRecord = {
   enrolledAt: string;
   cancelled: boolean;
   conflict: boolean;
+  escrowStatus?: string;
+  positionId?: number;
+  advanced?: boolean;
 };
 
 export default function DashboardPage() {
@@ -32,7 +35,21 @@ export default function DashboardPage() {
       if (res.status === 404) { setRecords([]); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as PositionRecord[];
-      setRecords(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        const enriched = await Promise.all(data.map(async (r) => {
+          try {
+            const eRes = await fetch(`${API_BASE}/escrow/${encodeURIComponent(`${r.queueId}:${r.identity}`)}`);
+            if (eRes.ok) {
+              const eData = await eRes.json();
+              r.escrowStatus = eData.status;
+            }
+          } catch { /* ignore */ }
+          return r;
+        }));
+        setRecords(enriched);
+      } else {
+        setRecords([]);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {
@@ -79,7 +96,14 @@ export default function DashboardPage() {
               {active.map((record, i) => (
                 <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-base font-semibold text-slate-900">{record.queueId}</h3>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-base font-semibold text-slate-900">{record.queueId}</h3>
+                      {record.escrowStatus && (
+                        <span className="w-max inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-800">
+                          Escrow: {record.escrowStatus}
+                        </span>
+                      )}
+                    </div>
                     <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600" aria-label="Identity bound" />
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
