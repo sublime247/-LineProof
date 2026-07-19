@@ -114,13 +114,19 @@ export default function DashboardPage() {
                     </div>
                     <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600" aria-label="Identity bound" />
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Enrolled {new Date(record.enrolledAt).toLocaleString()}
-                  </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="truncate font-mono text-xs text-slate-500">{record.identity}</span>
-                    <CopyButton text={record.identity} label="Copy" />
-                  </div>
+                  <dl>
+                    <div className="mt-1">
+                      <dt className="sr-only">Enrolled at</dt>
+                      <dd className="text-xs text-slate-500">
+                        Enrolled {new Date(record.enrolledAt).toLocaleString()}
+                      </dd>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <dt className="sr-only">Identity</dt>
+                      <dd className="truncate font-mono text-xs text-slate-500">{record.identity}</dd>
+                      <CopyButton text={record.identity} label="Copy" />
+                    </div>
+                  </dl>
                 </div>
               ))}
             </div>
