@@ -1,4 +1,4 @@
-use soroban_sdk::{contract, contractimpl, contracttype, Address, BytesN, Env, Symbol};
+use soroban_sdk::{contract, contractimpl, contracttype, xdr::ToXdr, Address, BytesN, Env, Symbol};
 
 /// TTL threshold: renew if remaining TTL is below this many ledgers (~13.8 hours at 5s/ledger)
 const TTL_THRESHOLD: u32 = 10_000;
@@ -96,9 +96,11 @@ impl Enrollment for EnrollmentImpl {
     fn cancel(env: Env, caller: Address, queue_id: Symbol) {
         caller.require_auth();
         let key = Self::record_key(&env, &caller, &queue_id);
-        if !env.storage().persistent().has(&key) {
-            panic!("not enrolled");
-        }
+        let record: EnrollmentRecord = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| panic!("not enrolled"));
         env.storage().persistent().remove(&key);
         emit(
             &env,
@@ -106,7 +108,7 @@ impl Enrollment for EnrollmentImpl {
             queue_id,
             &caller,
             env.ledger().timestamp(),
-            [0u8; 32],
+            record.proof_hash,
         );
     }
 
@@ -174,22 +176,11 @@ impl EnrollmentImpl {
         (Symbol::new(env, "enroll_cnt"), queue_id.clone())
     }
 
-    /// Produces a 32-byte proof hash by XOR-folding the SHA-256-like preimage.
-    /// In production this should use env.crypto().sha256() once available.
+    /// Produces a 32-byte cryptographic proof hash using SHA256.
+    /// The preimage is the deterministic XDR serialization of (identity, queue_id, enrolled_at).
     fn compute_proof_hash(env: &Env, identity: &Address, queue_id: &Symbol, enrolled_at: u64) -> BytesN<32> {
-        let ts_bytes = enrolled_at.to_be_bytes();
-        let mut hash = [0u8; 32];
-        // Mix timestamp bytes into the hash
-        for (i, b) in ts_bytes.iter().enumerate() {
-            hash[i % 32] ^= b;
-        }
-        // Mix ledger sequence number for additional entropy
-        let seq = env.ledger().sequence();
-        let seq_bytes = seq.to_be_bytes();
-        for (i, b) in seq_bytes.iter().enumerate() {
-            hash[(i + 8) % 32] ^= b;
-        }
-        BytesN::from_array(env, &hash)
+        let preimage = (identity.clone(), queue_id.clone(), enrolled_at);
+        env.crypto().sha256(&preimage.to_xdr(env))
     }
 }
 

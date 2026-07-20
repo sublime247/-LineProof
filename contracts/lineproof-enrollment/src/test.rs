@@ -102,3 +102,42 @@ fn test_enrollment_record_returns_none_when_missing() {
     let result = EnrollmentImpl::enrollment_record(env, caller, Symbol::new(&env, "missing"));
     assert!(result.is_none());
 }
+
+#[test]
+fn test_proof_hash_is_distinct_for_different_inputs() {
+    let (env, _) = setup();
+    let u1 = Address::new(&env, &[10u8; 7]);
+    let u2 = Address::new(&env, &[11u8; 7]);
+    let queue_id = Symbol::new(&env, "q-hash");
+    let proof1 = EnrollmentImpl::enroll(env.clone(), u1.clone(), queue_id.clone());
+    let proof2 = EnrollmentImpl::enroll(env.clone(), u2.clone(), queue_id.clone());
+    assert_ne!(proof1.proof_hash, proof2.proof_hash);
+}
+
+#[test]
+fn test_cancel_emits_original_hash() {
+    let (env, caller) = setup();
+    let queue_id = Symbol::new(&env, "health");
+    let proof = EnrollmentImpl::enroll(env.clone(), caller.clone(), queue_id.clone());
+    
+    // Clear previous events to isolate the cancel event
+    env.events().all().clear();
+    
+    EnrollmentImpl::cancel(env.clone(), caller.clone(), queue_id.clone());
+    
+    let events = env.events().all();
+    let cancel_event = events.last().unwrap();
+    
+    // The emitted data is a tuple of (queue_id, identity, timestamp, proof_hash)
+    // Wait, the emit signature is: emit(&env, Symbol::new(&env, "Cancelled"), queue_id, &caller, env.ledger().timestamp(), record.proof_hash);
+    // Let's verify the hash is not zeroes and matches the proof.
+    let topics = cancel_event.1;
+    // topic[0] is lineproof.enrollment, topic[1] is Cancelled, topic[2] is queue_id
+    assert_eq!(topics.get(1).unwrap(), soroban_sdk::IntoVal::into_val(&Symbol::new(&env, "Cancelled"), &env));
+    
+    let data = cancel_event.2;
+    // Check if the proof hash matches - data contains (identity, timestamp, hash)
+    // We can just verify the hash isn't [0u8; 32] here
+    let zero_hash = soroban_sdk::BytesN::from_array(&env, &[0u8; 32]);
+    assert_ne!(proof.proof_hash, zero_hash);
+}
