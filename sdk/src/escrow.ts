@@ -1,3 +1,6 @@
+import { TransactionBuilder, Operation, BASE_FEE } from '@stellar/stellar-sdk';
+import { LineProofClient } from './client.js';
+import { SDKError } from './types.js';
 import {
   TransactionBuilder,
   Operation,

@@ -1,8 +1,14 @@
 import {
-  Networks,
+  Account,
   Keypair,
   Horizon,
   SorobanRpc,
+} from '@stellar/stellar-sdk';
+
+// Neutral all-zeros account used as the source for simulation-only (read)
+// transactions, where no signature and no real sequence number are needed.
+const SIMULATION_ACCOUNT_ID = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+import { LineProofConfig, DEFAULT_LINEPROOF_CONFIG, SDKError, isNetworkPassphrase } from './types.js';
   TransactionBuilder,
   BASE_FEE,
   xdr,
@@ -21,8 +27,8 @@ export class LineProofClient {
   readonly server: Horizon.Server;
   readonly sorobanServer: SorobanRpc.Server;
   readonly networkPassphrase: string;
-  private readonly sourceSecret?: string;
-  private readonly sourcePublic?: string;
+  private readonly sourceSecret: string | undefined;
+  private readonly sourcePublic: string | undefined;
   readonly timeoutMs: number;
   readonly maxRetries: number;
 
@@ -57,6 +63,10 @@ export class LineProofClient {
     // SorobanRpc.Server for Soroban contract operations (preserves /rpc path)
     const sorobanUrl = resolved.sorobanRpcUrl || resolved.rpcServerUrl;
     this.sorobanServer = new SorobanRpc.Server(sorobanUrl);
+  }
+
+  simulationSource(): Account {
+    return new Account(this.sourcePublic ?? SIMULATION_ACCOUNT_ID, '0');
   }
 
   requireKeypair(): Keypair {

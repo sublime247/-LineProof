@@ -1,9 +1,12 @@
 import {
   TransactionBuilder,
   Operation,
-  Keypair,
   BASE_FEE,
+  SorobanRpc,
   xdr,
+} from '@stellar/stellar-sdk';
+import { LineProofClient } from './client.js';
+import { SDKError } from './types.js';
   SorobanDataBuilder,
   Account,
   SorobanRpc,
