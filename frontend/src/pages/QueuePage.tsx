@@ -5,7 +5,7 @@ import { useQueue } from '../hooks/useQueues';
 import { useEnrollment } from '../hooks/useEnrollment';
 import QueueStatusBadge from '../components/QueueStatusBadge';
 import ProgressBar from '../components/ProgressBar';
-import Spinner from '../components/Spinner';
+import QueuePageSkeleton from '../components/QueuePageSkeleton';
 import CopyButton from '../components/CopyButton';
 import EscrowStatusCard from '../components/EscrowStatusCard';
 import LiveRegion from '../components/LiveRegion';
@@ -53,9 +53,7 @@ export default function QueuePage() {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center gap-2 text-sm text-slate-600"><Spinner size="sm" /> Loading queue…</div>
-  );
+  if (loading) return <QueuePageSkeleton />;
 
   if (error || !queue) return (
     <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -67,6 +65,7 @@ export default function QueuePage() {
 
   return (
     <div className="space-y-6">
+      <LiveRegion type="status" className="sr-only">Content loaded</LiveRegion>
       <Link to="/queues" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
         <ArrowLeft className="h-4 w-4" /> Back to queues
       </Link>
