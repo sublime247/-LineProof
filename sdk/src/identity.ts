@@ -1,19 +1,11 @@
 import {
-  TransactionBuilder,
   Operation,
-  BASE_FEE,
-  SorobanRpc,
   xdr,
-} from '@stellar/stellar-sdk';
-import { LineProofClient } from './client.js';
-import { SDKError } from './types.js';
-  SorobanDataBuilder,
-  Account,
-  SorobanRpc,
   Address,
 } from "@stellar/stellar-sdk";
 import { LineProofClient } from "./client.js";
 import { SDKError } from "./types.js";
+import { OnRetryFn } from "./utils.js";
 
 export class IdentityClient {
   private readonly client: LineProofClient;
@@ -22,29 +14,22 @@ export class IdentityClient {
     this.client = client;
   }
 
-  async bindIdentity(queueId: string, identity: string): Promise<string> {
+  /**
+   * Bind an identity to a queue. Retries transient failures automatically.
+   * @param onRetry  Optional observer for retry attempts
+   */
+  async bindIdentity(queueId: string, identity: string, onRetry?: OnRetryFn): Promise<string> {
     if (!identity || typeof identity !== "string") {
       throw new SDKError("INVALID_IDENTITY", "Identity public key is required");
     }
-    const sourceKeypair = this.client.requireKeypair();
-    const source = await this.client.server.loadAccount(
-      sourceKeypair.publicKey(),
+    return this.client.submitSorobanOperation(
+      Operation.invokeContractFunction({
+        contract: queueId,
+        function: "bind",
+        args: [],
+      }),
+      onRetry,
     );
-    const tx = new TransactionBuilder(source, {
-      fee: BASE_FEE,
-      networkPassphrase: this.client.getNetworkPassphrase(),
-    })
-      .addOperation(
-        Operation.invokeContractFunction({
-          contract: queueId,
-          function: "bind",
-          args: [],
-        }),
-      )
-      .setTimeout(30)
-      .build();
-    tx.sign(sourceKeypair);
-    return (await this.client.server.submitTransaction(tx)).hash;
   }
 
   async isBound(queueId: string, identity: string): Promise<boolean> {

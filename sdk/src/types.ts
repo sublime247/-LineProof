@@ -8,6 +8,9 @@ export interface LineProofConfig {
   publicKey?: string;
   timeoutMs?: number;
   maxRetries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  jitterFactor?: number;
 }
 
 /** Convenience enum so callers don't need to import from @stellar/stellar-sdk */

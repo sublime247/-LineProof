@@ -1,20 +1,12 @@
 import {
-  TransactionBuilder,
   Operation,
   BASE_FEE,
-  SorobanRpc,
-  nativeToScVal,
   xdr,
-} from '@stellar/stellar-sdk';
-import { LineProofClient } from './client.js';
-import { SDKError, Position } from './types.js';
-  SorobanDataBuilder,
-  Account,
-  SorobanRpc,
   scValToNative,
 } from "@stellar/stellar-sdk";
 import { LineProofClient } from "./client.js";
 import { SDKError, Position } from "./types.js";
+import { OnRetryFn } from "./utils.js";
 
 export type QueueClientOptions = {
   queueContractId: string;
@@ -52,7 +44,6 @@ export class QueueClient {
       throw new SDKError("INVALID_RESPONSE", "Failed to parse Position from contract");
     }
 
-    // Soroban enums/symbols can sometimes be parsed as strings or objects.
     let status = "pending";
     if (parsed.status) {
       if (typeof parsed.status === "string") {
@@ -73,45 +64,36 @@ export class QueueClient {
     return position;
   }
 
-  async advance(_batchSize: number): Promise<number[]> {
-    const sourceKeypair = this.lineProof.requireKeypair();
-    const source = await this.lineProof.server.loadAccount(sourceKeypair.publicKey());
-    const tx = new TransactionBuilder(source, {
-      fee: BASE_FEE,
-      networkPassphrase: this.lineProof.networkPassphrase,
-    })
-      .addOperation(
-        Operation.invokeContractFunction({
-          contract: this.queueContractId,
-          function: 'advance',
-          args: [],
-        }),
-      )
-      .setTimeout(30)
-      .build();
-    tx.sign(sourceKeypair);
-    const result = await this.lineProof.server.submitTransaction(tx);
-    return [parseInt(result.hash.slice(0, 8), 16)];
-  async advance(batchSize: number): Promise<number[]> {
+  /**
+   * Advance the queue. Retries transient failures automatically.
+   * @param onRetry  Optional observer for retry attempts
+   */
+  async advance(batchSize: number, onRetry?: OnRetryFn): Promise<number[]> {
     const hash = await this.lineProof.submitSorobanOperation(
       Operation.invokeContractFunction({
         contract: this.queueContractId,
         function: "advance",
         args: [xdr.ScVal.scvU32(batchSize)],
       }),
+      onRetry,
     );
     const resultXdr = await this.lineProof.awaitTransaction(hash);
     const advancedIds = scValToNative(resultXdr) as number[];
     return advancedIds || [];
   }
 
-  async close(): Promise<string> {
+  /**
+   * Close the queue. Retries transient failures automatically.
+   * @param onRetry  Optional observer for retry attempts
+   */
+  async close(onRetry?: OnRetryFn): Promise<string> {
     return this.lineProof.submitSorobanOperation(
       Operation.invokeContractFunction({
         contract: this.queueContractId,
         function: "close",
         args: [],
       }),
+      onRetry,
     );
   }
 }
