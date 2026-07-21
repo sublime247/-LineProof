@@ -3,21 +3,13 @@ import {
   Keypair,
   Horizon,
   SorobanRpc,
-} from '@stellar/stellar-sdk';
-
-// Neutral all-zeros account used as the source for simulation-only (read)
-// transactions, where no signature and no real sequence number are needed.
-const SIMULATION_ACCOUNT_ID = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
-import { LineProofConfig, DEFAULT_LINEPROOF_CONFIG, SDKError, isNetworkPassphrase } from './types.js';
   TransactionBuilder,
   BASE_FEE,
-} from "@stellar/stellar-sdk";
-import {
-  LineProofConfig,
-  DEFAULT_LINEPROOF_CONFIG,
-  SDKError,
-  isNetworkPassphrase,
-} from "./types.js";
+} from '@stellar/stellar-sdk';
+
+import { LineProofConfig, DEFAULT_LINEPROOF_CONFIG, SDKError, isNetworkPassphrase } from './types.js';
+
+const SIMULATION_ACCOUNT_ID = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
 
 export class LineProofClient {
   readonly server: Horizon.Server;
@@ -131,14 +123,9 @@ export class LineProofClient {
     return this.factoryContractId;
   }
 
-  static readOnly(config: Omit<LineProofConfig, 'privateKey'>): LineProofClient {
-    return new LineProofClient(config);
   static readOnly(
     config: Omit<LineProofConfig, "privateKey">,
   ): LineProofClient {
-    return new LineProofClient({
-      ...config,
-      privateKey: undefined,
-    });
+    return new LineProofClient(config as LineProofConfig);
   }
 }
