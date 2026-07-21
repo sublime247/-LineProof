@@ -1,10 +1,10 @@
 use soroban_sdk::{testutils::Address as _, Address, Env, Symbol};
 
-use crate::{DuplicateBehavior, EnrollmentImpl};
+use crate::{DuplicateBehavior, Enrollment, EnrollmentImpl};
 
 fn setup() -> (Env, Address) {
     let env = Env::default();
-    let caller = Address::new(&env, &[1; 7]);
+    let caller = Address::generate(&env);
     (env, caller)
 }
 
@@ -58,8 +58,8 @@ fn test_cancel_panics_when_not_enrolled() {
 #[test]
 fn test_multiple_users_same_queue() {
     let (env, _) = setup();
-    let u1 = Address::new(&env, &[1u8; 7]);
-    let u2 = Address::new(&env, &[2u8; 7]);
+    let u1 = Address::generate(&env);
+    let u2 = Address::generate(&env);
     let queue_id = Symbol::new(&env, "shared");
     EnrollmentImpl::enroll(env.clone(), u1.clone(), queue_id.clone());
     EnrollmentImpl::enroll(env.clone(), u2.clone(), queue_id.clone());
@@ -77,7 +77,7 @@ fn test_set_duplicate_behavior() {
 #[test]
 fn test_finalize_enrollment() {
     let (env, admin) = setup();
-    let user = Address::new(&env, &[5u8; 7]);
+    let user = Address::generate(&env);
     let queue_id = Symbol::new(&env, "fin-q");
     EnrollmentImpl::enroll(env.clone(), user.clone(), queue_id.clone());
     EnrollmentImpl::finalize_enrollment(env.clone(), admin.clone(), user.clone(), queue_id.clone());
@@ -89,7 +89,7 @@ fn test_finalize_enrollment() {
 #[should_panic(expected = "already finalized")]
 fn test_finalize_twice_panics() {
     let (env, admin) = setup();
-    let user = Address::new(&env, &[6u8; 7]);
+    let user = Address::generate(&env);
     let queue_id = Symbol::new(&env, "fin2");
     EnrollmentImpl::enroll(env.clone(), user.clone(), queue_id.clone());
     EnrollmentImpl::finalize_enrollment(env.clone(), admin.clone(), user.clone(), queue_id.clone());
@@ -106,8 +106,8 @@ fn test_enrollment_record_returns_none_when_missing() {
 #[test]
 fn test_proof_hash_is_distinct_for_different_inputs() {
     let (env, _) = setup();
-    let u1 = Address::new(&env, &[10u8; 7]);
-    let u2 = Address::new(&env, &[11u8; 7]);
+    let u1 = Address::generate(&env);
+    let u2 = Address::generate(&env);
     let queue_id = Symbol::new(&env, "q-hash");
     let proof1 = EnrollmentImpl::enroll(env.clone(), u1.clone(), queue_id.clone());
     let proof2 = EnrollmentImpl::enroll(env.clone(), u2.clone(), queue_id.clone());
@@ -132,7 +132,7 @@ fn test_cancel_emits_original_hash() {
     // Wait, the emit signature is: emit(&env, Symbol::new(&env, "Cancelled"), queue_id, &caller, env.ledger().timestamp(), record.proof_hash);
     // Let's verify the hash is not zeroes and matches the proof.
     let topics = cancel_event.1;
-    // topic[0] is lineproof.enrollment, topic[1] is Cancelled, topic[2] is queue_id
+    // topic[0] is lineproof_enrollment, topic[1] is Cancelled, topic[2] is queue_id
     assert_eq!(topics.get(1).unwrap(), soroban_sdk::IntoVal::into_val(&Symbol::new(&env, "Cancelled"), &env));
     
     let data = cancel_event.2;

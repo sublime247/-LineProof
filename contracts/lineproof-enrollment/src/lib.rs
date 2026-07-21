@@ -33,7 +33,6 @@ pub struct EnrollmentRecord {
     pub finalized: bool,
 }
 
-#[contract]
 pub trait Enrollment {
     fn enroll(env: Env, caller: Address, queue_id: Symbol) -> EnrollmentProof;
     fn cancel(env: Env, caller: Address, queue_id: Symbol);
@@ -44,6 +43,7 @@ pub trait Enrollment {
     fn enrollment_count(env: Env, queue_id: Symbol) -> u32;
 }
 
+#[contract]
 pub struct EnrollmentImpl;
 
 #[contractimpl]
@@ -186,10 +186,10 @@ impl EnrollmentImpl {
 
 fn emit(env: &Env, kind: Symbol, queue_id: Symbol, _identity: &Address, _timestamp: u64, _hash: BytesN<32>) {
     env.events().publish((
-        Symbol::new(env, "lineproof.enrollment"),
+        Symbol::new(env, "lineproof_enrollment"),
         kind,
         queue_id,
-    ));
+    ), ());
 }
 
 #[cfg(test)]

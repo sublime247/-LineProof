@@ -41,6 +41,12 @@ export interface PositionAdvancedEvent extends LineProofRawEvent {
   positionId: number;
 }
 
+export interface PositionExpiredEvent extends LineProofRawEvent {
+  namespace: 'lineproof.queue';
+  kind: 'Expired';
+  positionId: number;
+}
+
 export interface QueueClosedEvent extends LineProofRawEvent {
   namespace: 'lineproof.queue';
   kind: 'QueueClosed';
@@ -132,7 +138,7 @@ export interface QueueRegisteredEvent extends LineProofRawEvent {
 
 export type AnyLineProofEvent =
   | QueueInitializedEvent | EnrollmentOpenedEvent | EnrollmentClosedEvent
-  | PositionAdvancedEvent | QueueClosedEvent
+  | PositionAdvancedEvent | PositionExpiredEvent | QueueClosedEvent
   | EnrolledEvent | EnrollmentCancelledEvent | EnrollmentFinalizedEvent
   | EscrowDepositedEvent | EscrowReleasedEvent | EscrowRefundedEvent | EscrowExpiredEvent
   | IdentityBoundEvent | IdentityUnboundEvent | TransferRevertedEvent
