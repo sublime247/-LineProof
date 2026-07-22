@@ -3,6 +3,10 @@ use soroban_sdk::{
     Address, Env, Symbol, TryFromVal, BytesN,
 };
 
+use crate::{DuplicateBehavior, Enrollment, EnrollmentImpl};
+
+fn setup() -> (Env, Address) {
+    let env = Env::default();
 use crate::{DuplicateBehavior, EnrollmentImpl, EnrollmentImplClient};
 
 fn setup() -> (Env, Address) {
@@ -95,6 +99,11 @@ fn test_set_duplicate_behavior() {
 #[test]
 fn test_finalize_enrollment() {
     let (env, admin) = setup();
+    let user = Address::generate(&env);
+    let queue_id = Symbol::new(&env, "fin-q");
+    EnrollmentImpl::enroll(env.clone(), user.clone(), queue_id.clone());
+    EnrollmentImpl::finalize_enrollment(env.clone(), admin.clone(), user.clone(), queue_id.clone());
+    let record = EnrollmentImpl::enrollment_record(env, user, queue_id).unwrap();
     let contract_id = env.register(EnrollmentImpl, ());
     let client = EnrollmentImplClient::new(&env, &contract_id);
     let user = Address::generate(&env);
@@ -131,6 +140,11 @@ fn test_enrollment_record_returns_none_when_missing() {
 #[test]
 fn test_proof_hash_is_distinct_for_different_inputs() {
     let (env, _) = setup();
+    let u1 = Address::generate(&env);
+    let u2 = Address::generate(&env);
+    let queue_id = Symbol::new(&env, "q-hash");
+    let proof1 = EnrollmentImpl::enroll(env.clone(), u1.clone(), queue_id.clone());
+    let proof2 = EnrollmentImpl::enroll(env.clone(), u2.clone(), queue_id.clone());
     let contract_id = env.register(EnrollmentImpl, ());
     let client = EnrollmentImplClient::new(&env, &contract_id);
     let u1 = Address::generate(&env);
@@ -155,6 +169,8 @@ fn test_cancel_emits_original_hash() {
     let cancel_event = events.last().unwrap();
     
     let topics = cancel_event.1;
+    // topic[0] is lineproof_enrollment, topic[1] is Cancelled, topic[2] is queue_id
+    assert_eq!(topics.get(1).unwrap(), soroban_sdk::IntoVal::into_val(&Symbol::new(&env, "Cancelled"), &env));
     assert_eq!(
         Symbol::try_from_val(&env, &topics.get(1).unwrap()).unwrap(),
         Symbol::new(&env, "Cancelled")

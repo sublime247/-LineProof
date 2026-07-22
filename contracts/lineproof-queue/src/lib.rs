@@ -57,7 +57,6 @@ pub enum PositionStatus {
     Cancelled,
 }
 
-#[contract]
 pub trait Queue {
     fn initialize(env: Env, admin: Address, config: QueueConfig);
     fn open_enrollment(env: Env, admin: Address);
@@ -69,9 +68,12 @@ pub trait Queue {
     fn get_config(env: Env) -> QueueConfig;
     fn current_position_index(env: Env) -> u32;
     fn total_enrolled(env: Env) -> u32;
+    fn expire_position(env: Env, admin: Address, position_id: u32);
+    fn expire_positions_batch(env: Env, admin: Address, position_ids: Vec<u32>);
     fn close(env: Env, admin: Address);
 }
 
+#[contract]
 pub struct QueueImpl;
 
 #[contractimpl]
@@ -86,7 +88,6 @@ impl Queue for QueueImpl {
         let key_idx = Symbol::new(&env, "idx");
         env.storage().persistent().set(&key_idx, &0u32);
         env.storage().persistent().extend_ttl(&key_idx, TTL_THRESHOLD, TTL_EXTEND_TO);
-        env.storage().persistent().extend_ttl(&env.current_contract_address(), TTL_THRESHOLD, TTL_EXTEND_TO);
         emit(&env, Symbol::new(&env, "Initialized"), 0, &admin, 0);
     }
 
@@ -202,7 +203,7 @@ impl Queue for QueueImpl {
                         break;
                     }
                     let id = idx + 1;
-                    if let Some(mut pos) = Self::get_position(&env, id) {
+                    if let Some(mut pos) = Self::get_position(env.clone(), id) {
                         if matches!(pos.status, PositionStatus::Pending) {
                             pos.status = PositionStatus::Advanced;
                             pos.advanced_at = Some(env.ledger().timestamp());
@@ -223,7 +224,7 @@ impl Queue for QueueImpl {
                     emit(
                         &env,
                         Symbol::new(&env, "Advanced"),
-                        *id,
+                        id,
                         &admin,
                         env.ledger().timestamp(),
                     );
@@ -282,6 +283,54 @@ impl Queue for QueueImpl {
             env.ledger().timestamp(),
         );
     }
+
+    fn expire_position(env: Env, admin: Address, position_id: u32) {
+        admin.require_auth();
+        let config = Self::get_config_internal(&env);
+        if !matches!(config.status, QueueStatus::AdvancementActive) && !matches!(config.status, QueueStatus::Closed) {
+            panic!("queue must be in advancement or closed state");
+        }
+        let mut pos = Self::load_position(&env, position_id);
+        if !matches!(pos.status, PositionStatus::Pending) {
+            panic!("only pending positions can be expired");
+        }
+        pos.status = PositionStatus::Expired;
+        let key_pos = Self::position_key(&env, position_id);
+        env.storage().persistent().set(&key_pos, &pos);
+        env.storage().persistent().extend_ttl(&key_pos, TTL_THRESHOLD, TTL_EXTEND_TO);
+        emit(
+            &env,
+            Symbol::new(&env, "Expired"),
+            position_id,
+            &admin,
+            env.ledger().timestamp(),
+        );
+    }
+
+    fn expire_positions_batch(env: Env, admin: Address, position_ids: Vec<u32>) {
+        admin.require_auth();
+        let config = Self::get_config_internal(&env);
+        if !matches!(config.status, QueueStatus::AdvancementActive) && !matches!(config.status, QueueStatus::Closed) {
+            panic!("queue must be in advancement or closed state");
+        }
+        for position_id in position_ids.iter() {
+            let mut pos = Self::load_position(&env, position_id);
+            if !matches!(pos.status, PositionStatus::Pending) {
+                panic!("only pending positions can be expired");
+            }
+            pos.status = PositionStatus::Expired;
+            let key_pos = Self::position_key(&env, position_id);
+            env.storage().persistent().set(&key_pos, &pos);
+            env.storage().persistent().extend_ttl(&key_pos, TTL_THRESHOLD, TTL_EXTEND_TO);
+            emit(
+                &env,
+                Symbol::new(&env, "Expired"),
+                position_id,
+                &admin,
+                env.ledger().timestamp(),
+            );
+        }
+    }
 }
 
 impl QueueImpl {
@@ -312,7 +361,7 @@ impl QueueImpl {
 
 fn emit(env: &Env, kind: Symbol, position_id: u32, _identity: &Address, _timestamp: u64) {
     env.events()
-        .publish((Symbol::new(env, "lineproof.queue"), kind, position_id));
+        .publish((Symbol::new(env, "lineproof_queue"), kind, position_id), ());
 }
 
 #[cfg(test)]
