@@ -5,6 +5,7 @@ import {
 } from '@stellar/stellar-sdk';
 import { LineProofClient } from './client.js';
 import { SDKError, Position, validateContractId } from './types.js';
+import { SDKError, Position } from './types.js';
 
 export type QueueClientOptions = {
   queueContractId: string;
@@ -60,8 +61,10 @@ export class QueueClient {
       enrolledAt: Number(parsed.enrolled_at || 0),
       identity: parsed.identity || '',
       status: status as any,
-      advancedAt: parsed.advanced_at ? Number(parsed.advanced_at) : undefined,
     };
+    if (parsed.advanced_at) {
+      position.advancedAt = Number(parsed.advanced_at);
+    }
 
     return position;
   }

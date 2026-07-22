@@ -2,6 +2,7 @@ import {
   Operation,
   Address,
   xdr,
+  Address,
 } from '@stellar/stellar-sdk';
 import { LineProofClient } from './client.js';
 import { SDKError, validateContractId } from './types.js';
@@ -9,6 +10,7 @@ import { SDKError, validateContractId } from './types.js';
 export type EnrollmentClientOptions = {
   contractId?: string;
 };
+import { SDKError } from './types.js';
 
 export class EnrollmentClient {
   private readonly client: LineProofClient;

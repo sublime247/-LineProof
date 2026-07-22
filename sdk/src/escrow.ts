@@ -8,6 +8,9 @@ import { SDKError, validateContractId } from './types.js';
 export type EscrowClientOptions = {
   contractId?: string;
 };
+import { Operation, xdr } from '@stellar/stellar-sdk';
+import { LineProofClient } from './client.js';
+import { SDKError } from './types.js';
 
 export class EscrowClient {
   private readonly client: LineProofClient;

@@ -18,6 +18,8 @@ import {
   isNetworkPassphrase,
   validateContractId,
 } from './types.js';
+} from '@stellar/stellar-sdk';
+import { LineProofConfig, DEFAULT_LINEPROOF_CONFIG, SDKError, isNetworkPassphrase } from './types.js';
 
 // Neutral all-zeros account used as the source for simulation-only (read)
 // transactions, where no signature and no real sequence number are needed.
@@ -250,6 +252,8 @@ export class LineProofClient {
     }
     const entryXdr = response.entries[0].xdr;
     const ledgerEntryData = xdr.LedgerEntryData.fromXDR(entryXdr, 'base64');
+    const entryXdr = (response.entries[0] as any).xdr;
+    const ledgerEntryData = xdr.LedgerEntryData.fromXDR(entryXdr, "base64");
     return ledgerEntryData.contractData().val();
   }
 
@@ -274,9 +278,6 @@ export class LineProofClient {
   static readOnly(
     config: Omit<LineProofConfig, 'privateKey'>,
   ): LineProofClient {
-    return new LineProofClient({
-      ...config,
-      privateKey: undefined,
-    });
+    return new LineProofClient(config as LineProofConfig);
   }
 }

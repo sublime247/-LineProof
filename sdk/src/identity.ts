@@ -4,6 +4,7 @@ import {
   BASE_FEE,
   Address,
   xdr,
+  Address,
 } from '@stellar/stellar-sdk';
 import { LineProofClient } from './client.js';
 import { SDKError, validateContractId } from './types.js';
@@ -11,6 +12,7 @@ import { SDKError, validateContractId } from './types.js';
 export type IdentityClientOptions = {
   contractId?: string;
 };
+import { SDKError } from './types.js';
 
 export class IdentityClient {
   private readonly client: LineProofClient;
