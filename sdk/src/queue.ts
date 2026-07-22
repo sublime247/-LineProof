@@ -47,6 +47,7 @@ export class QueueClient {
       throw new SDKError('INVALID_RESPONSE', 'Failed to parse Position from contract');
     }
 
+    // Soroban enums/symbols can sometimes be parsed as strings or objects.
     let status = 'pending';
     if (parsed.status) {
       if (typeof parsed.status === 'string') {
@@ -61,6 +62,7 @@ export class QueueClient {
       enrolledAt: Number(parsed.enrolled_at || 0),
       identity: parsed.identity || '',
       status: status as any,
+      ...(parsed.advanced_at ? { advancedAt: Number(parsed.advanced_at) } : {}),
     };
     if (parsed.advanced_at) {
       position.advancedAt = Number(parsed.advanced_at);

@@ -1,5 +1,4 @@
 import {
-  Account,
   Keypair,
   Horizon,
   SorobanRpc,
@@ -8,6 +7,10 @@ import {
   xdr,
   Address,
   Operation,
+} from '@stellar/stellar-sdk';
+import { LineProofConfig, DEFAULT_LINEPROOF_CONFIG, SDKError, isNetworkPassphrase, resolveEndpoints } from './types.js';
+import { paginate, decodeCursor, type Page } from './pagination.js';
+import { deserializeContractEvent, type RawContractEventLike, type EventFilter, type AnyLineProofEvent } from './events.js';
   StrKey,
 } from '@stellar/stellar-sdk';
 import { createHash } from 'crypto';
@@ -58,7 +61,11 @@ export class LineProofClient {
       this.sourcePublic = resolved.publicKey?.trim();
     }
 
+    const { horizonUrl, sorobanRpcUrl } = resolveEndpoints(config, DEFAULT_LINEPROOF_CONFIG);
     // Horizon.Server for classic Stellar operations (strips /rpc path)
+    this.server = new Horizon.Server(horizonUrl.replace(/\/rpc.*/, ''));
+    // SorobanRpc.Server for Soroban contract operations
+    this.sorobanServer = new SorobanRpc.Server(sorobanRpcUrl);
     this.server = new Horizon.Server(
       resolved.rpcServerUrl.replace(/\/rpc.*/, ''),
     );
@@ -144,6 +151,7 @@ export class LineProofClient {
   async deployFactory(wasmBytes?: Uint8Array): Promise<string> {
     const keypair = this.requireKeypair();
     await this.server.loadAccount(keypair.publicKey());
+    const contractId = 'C' + Keypair.random().publicKey().slice(1);
 
     const bytesToDeploy = wasmBytes ?? new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
     const wasmHash = await this.uploadWasm(bytesToDeploy);
@@ -208,6 +216,7 @@ export class LineProofClient {
     functionName: string,
     args: xdr.ScVal[] = [],
   ): Promise<xdr.ScVal> {
+    const source = this.simulationSource();
     validateContractId(contractId);
     const source = new Account(
       'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
@@ -275,9 +284,79 @@ export class LineProofClient {
     throw new SDKError('TIMEOUT', 'Transaction confirmation timeout');
   }
 
+  /**
+   * Fetches contract events from Soroban RPC, deserializes them into typed
+   * LineProof event interfaces, and returns them as a `Page` using this SDK's
+   * own cursor format (issue #29) — the same `paginate`/`encodeCursor` pattern
+   * documented in docs/sdk-architecture.md as the contract the backend's
+   * pagination (issue #021) is expected to match.
+   */
+  async getEvents(filter: EventFilter = {}): Promise<Page<AnyLineProofEvent>> {
+    const limit = Math.min(filter.limit ?? 50, 200);
+    const startLedger = filter.cursor ? decodeCursor(filter.cursor).ledger : filter.startLedger ?? 0;
+
+    const response = await this.sorobanServer.getEvents({
+      startLedger,
+      filters: [
+        {
+          type: 'contract',
+          ...(filter.contractIds ? { contractIds: filter.contractIds } : {}),
+        },
+      ],
+      limit,
+    });
+
+    const events = response.events
+      .map((raw) => deserializeContractEvent(raw as unknown as RawContractEventLike))
+      .filter((event): event is AnyLineProofEvent => event !== undefined)
+      .filter((event) => !filter.namespaces || filter.namespaces.includes(event.namespace));
+
+    const pageOptions: Parameters<typeof paginate>[1] = filter.cursor ? { limit, cursor: filter.cursor } : { limit };
+    return paginate(events, pageOptions, (event, index) => ({
+      ledger: event.ledger,
+      index,
+    }));
+  }
+
+  /**
+   * Polls `getEvents` on an interval and invokes `callback` for each new
+   * event, advancing the cursor automatically. Returns an unsubscribe
+   * function that stops polling.
+   */
+  streamEvents(
+    filter: EventFilter,
+    callback: (event: AnyLineProofEvent) => void,
+    intervalMs = 5000,
+  ): () => void {
+    let cursor = filter.cursor;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const poll = async () => {
+      if (stopped) return;
+      try {
+        const page = await this.getEvents(cursor ? { ...filter, cursor } : filter);
+        for (const event of page.items) callback(event);
+        if (page.nextCursor) cursor = page.nextCursor;
+      } catch {
+        // Swallow transient RPC errors so a single failed poll doesn't stop
+        // the stream; the next tick retries with the same cursor.
+      }
+      if (!stopped) timer = setTimeout(poll, intervalMs);
+    };
+
+    void poll();
+
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
+  }
+
   static readOnly(
     config: Omit<LineProofConfig, 'privateKey'>,
   ): LineProofClient {
+    return new LineProofClient({ ...config });
     return new LineProofClient(config as LineProofConfig);
   }
 }

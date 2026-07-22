@@ -39,6 +39,7 @@ export class EscrowClient {
     }
     return this.client.submitSorobanOperation(
       Operation.invokeContractFunction({
+        contract: escrowContractId,
         contract: targetId,
         function: 'deposit',
         args: [],
@@ -51,6 +52,7 @@ export class EscrowClient {
     validateContractId(targetId);
     return this.client.submitSorobanOperation(
       Operation.invokeContractFunction({
+        contract: escrowContractId,
         contract: targetId,
         function: 'release',
         args: [],
@@ -63,6 +65,7 @@ export class EscrowClient {
     validateContractId(targetId);
     return this.client.submitSorobanOperation(
       Operation.invokeContractFunction({
+        contract: escrowContractId,
         contract: targetId,
         function: 'refund',
         args: [],
@@ -75,6 +78,7 @@ export class EscrowClient {
     validateContractId(targetId);
     return this.client.submitSorobanOperation(
       Operation.invokeContractFunction({
+        contract: escrowContractId,
         contract: targetId,
         function: 'expire',
         args: [xdr.ScVal.scvString(identity)],
