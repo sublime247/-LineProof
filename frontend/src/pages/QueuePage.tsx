@@ -7,6 +7,7 @@ import QueueStatusBadge from '../components/QueueStatusBadge';
 import ProgressBar from '../components/ProgressBar';
 import QueuePageSkeleton from '../components/QueuePageSkeleton';
 import CopyButton from '../components/CopyButton';
+import AlertBanner from '../components/AlertBanner';
 import EscrowStatusCard from '../components/EscrowStatusCard';
 import LiveRegion from '../components/LiveRegion';
 
@@ -59,6 +60,7 @@ export default function QueuePage() {
     <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">
       {error ?? 'Queue not found.'}
     </div>
+    <AlertBanner variant="error" message={error ?? 'Queue not found.'} />
   );
 
   const pct = queue.maxPositions > 0 ? Math.round((queue.enrolled / queue.maxPositions) * 100) : 0;
@@ -164,6 +166,11 @@ export default function QueuePage() {
             />
             {(inputError || enrollError) && (
               <LiveRegion className="text-sm text-red-600 dark:text-red-400">
+              <AlertBanner variant="error" message={inputError ?? enrollError ?? ''} />
+            )}
+            {result?.conflict && (
+              <AlertBanner variant="warning" message="This identity is already enrolled in this queue." />
+              <LiveRegion className="text-sm text-red-600">
                 {inputError ?? enrollError}
               </LiveRegion>
             )}
