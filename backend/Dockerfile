@@ -11,6 +11,7 @@ COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 # Install only backend + sdk dependencies
 RUN pnpm install --frozen-lockfile --filter @lineproof/backend...
+RUN pnpm install --frozen-lockfile --filter @lineproof/backend... 
 
 # Build SDK first (backend depends on it)
 FROM deps AS build-sdk
