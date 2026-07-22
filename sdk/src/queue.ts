@@ -4,6 +4,7 @@ import {
   scValToNative,
 } from '@stellar/stellar-sdk';
 import { LineProofClient } from './client.js';
+import { SDKError, Position, validateContractId } from './types.js';
 import { SDKError, Position } from './types.js';
 
 export type QueueClientOptions = {
@@ -15,6 +16,10 @@ export class QueueClient {
   private readonly lineProof: LineProofClient;
 
   constructor(lineProof: LineProofClient, options: QueueClientOptions) {
+    if (!options || typeof options.queueContractId !== 'string') {
+      throw new SDKError('INVALID_CONTRACT_ID', 'queueContractId is required');
+    }
+    validateContractId(options.queueContractId);
     this.lineProof = lineProof;
     this.queueContractId = options.queueContractId;
   }
@@ -59,6 +64,9 @@ export class QueueClient {
       status: status as any,
       ...(parsed.advanced_at ? { advancedAt: Number(parsed.advanced_at) } : {}),
     };
+    if (parsed.advanced_at) {
+      position.advancedAt = Number(parsed.advanced_at);
+    }
 
     return position;
   }
